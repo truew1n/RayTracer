@@ -128,4 +128,4 @@ private:
     float MRefIdx;
 };
 
-#endif // RT_MATERIAL_H
+#endif

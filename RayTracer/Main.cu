@@ -118,7 +118,7 @@ __global__ void FreeWorld(CHitable **List, CHitable **World, CCamera **Camera) {
 int main() {
     int FramebufferWidth = 1200;
     int FramebufferHeight = 600;
-    int SampleCount = 100;
+    int SampleCount = 500;
     int ThreadWidth = 8;
     int ThreadHeight = 8;
 

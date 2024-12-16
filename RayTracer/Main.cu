@@ -84,6 +84,7 @@ __global__ void Render(
         CRay Ray = (*Camera)->GetRay(U, V);
         Color += CalcColor(Ray, World, &LocalRandState);
     }
+    RandState[PixelIndex] = LocalRandState;
     Color /= float(SampleCount);
     Color[0] = sqrt(Color[0]);
     Color[1] = sqrt(Color[1]);
@@ -91,20 +92,22 @@ __global__ void Render(
     Framebuffer[PixelIndex] = Color;
 }
 
+#define RT_LIST_SIZE 5
 
 __global__ void CreateWorld(CHitable **List, CHitable **World, CCamera **Camera) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-        List[0] = new CSphere(CVec3(0, 0, -1), 0.5, new CLambertian(CVec3(0.8, 0.3, 0.3)));
+        List[0] = new CSphere(CVec3(0, 0, -1), 0.5, new CLambertian(CVec3(0.1, 0.2, 0.5)));
         List[1] = new CSphere(CVec3(0, -100.5, -1), 100, new CLambertian(CVec3(0.8, 0.8, 0.0)));
-        List[2] = new CSphere(CVec3(1, 0, -1), 0.5, new CMetal(CVec3(0.8, 0.6, 0.2), 1.0));
-        List[3] = new CSphere(CVec3(-1, 0, -1), 0.5, new CMetal(CVec3(0.8, 0.8, 0.8), 0.3));
-        *World = new CHitableList(List, 4);
+        List[2] = new CSphere(CVec3(1, 0, -1), 0.5, new CMetal(CVec3(0.8, 0.6, 0.2), 0.0));
+        List[3] = new CSphere(CVec3(-1, 0, -1), 0.5, new CDielectric(1.5));
+        List[4] = new CSphere(CVec3(-1, 0, -1), -0.45, new CDielectric(1.5));
+        *World = new CHitableList(List, RT_LIST_SIZE);
         *Camera = new CCamera();
     }
 }
 
 __global__ void FreeWorld(CHitable **List, CHitable **World, CCamera **Camera) {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < RT_LIST_SIZE; i++) {
         delete ((CSphere *) List[i])->MMaterial;
         delete List[i];
     }
@@ -115,7 +118,7 @@ __global__ void FreeWorld(CHitable **List, CHitable **World, CCamera **Camera) {
 int main() {
     int FramebufferWidth = 1200;
     int FramebufferHeight = 600;
-    int SampleCount = 1000;
+    int SampleCount = 100;
     int ThreadWidth = 8;
     int ThreadHeight = 8;
 
@@ -135,7 +138,7 @@ int main() {
 
     // Creating World
     CHitable **List;
-    checkCudaErrors(cudaMalloc((void **) &List, 4 * sizeof(CHitable *)));
+    checkCudaErrors(cudaMalloc((void **) &List, RT_LIST_SIZE * sizeof(CHitable *)));
     CHitable **World;
     checkCudaErrors(cudaMalloc((void **) &World, sizeof(CHitable *)));
     CCamera **Camera;
